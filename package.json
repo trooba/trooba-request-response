@@ -1,0 +1,33 @@
+{
+  "name": "trooba-request-response",
+  "version": "0.1.0",
+  "description": "trooba plugin that enables request/response/streaming flow in trooba version 3+",
+  "main": "index.js",
+  "scripts": {
+    "test": "./node_modules/.bin/mocha",
+    "test-coverage": "./node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trooba/trooba-request-response.git"
+  },
+  "keywords": [
+    "trooba",
+    "request",
+    "response",
+    "plugin"
+  ],
+  "author": "Dmytro Semenov <dimichsdg@yahoo.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/trooba/trooba-request-response/issues"
+  },
+  "homepage": "https://github.com/trooba/trooba-request-response",
+  "dependencies": {
+    "trooba": "file:../trooba"
+  },
+  "devDependencies": {
+    "istanbul": "^0.4.5",
+    "mocha": "^4.0.1"
+  }
+}

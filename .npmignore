@@ -1,0 +1,13 @@
+.jshintrc
+Makefile
+.jshintignore
+docs
+test
+examples
+.atom-build.json
+.beans
+.cache
+.git
+.github
+yarn.lock
+package-lock.json
