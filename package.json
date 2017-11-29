@@ -24,7 +24,8 @@
   },
   "homepage": "https://github.com/trooba/trooba-request-response",
   "dependencies": {
-    "trooba": "file:../trooba"
+    "trooba": "file:../trooba",
+    "trooba-plugin": "file:../trooba-plugin/"
   },
   "devDependencies": {
     "istanbul": "^0.4.5",
