@@ -1,5 +1,7 @@
 # request-response plugin
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/trooba/trooba-request-response.svg)](https://greenkeeper.io/)
+
 [![codecov](https://codecov.io/gh/trooba/trooba-request-response/branch/master/graph/badge.svg)](https://codecov.io/gh/trooba/trooba-request-response)
 [![Build Status](https://travis-ci.org/trooba/trooba-request-response.svg?branch=master)](https://travis-ci.org/trooba/trooba-request-response) [![NPM](https://img.shields.io/npm/v/trooba-request-response.svg)](https://www.npmjs.com/package/trooba-request-response)
 [![Downloads](https://img.shields.io/npm/dm/trooba-request-response.svg)](http://npm-stat.com/charts.html?package=trooba-request-response)
