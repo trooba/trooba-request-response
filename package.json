@@ -11,6 +11,9 @@
     "type": "git",
     "url": "https://github.com/trooba/trooba-request-response.git"
   },
+  "publishConfig": {
+    "registry": "http://registry.npmjs.org"
+  },
   "keywords": [
     "trooba",
     "request",
