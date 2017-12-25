@@ -223,6 +223,34 @@ describe(__filename, function () {
     });
 
     describe('streaming', function () {
+        it('should provide access to pipe and direction for request stream', function () {
+            var stream = Trooba
+            .use(require('..'))
+            .use(function () {})
+            .build()
+            .create()
+            .request('ping');
+
+            Assert.ok(stream.point);
+            Assert.equal(1, stream.direction);
+        });
+
+        it('should provide access to pipe and direction for response stream', function (next) {
+            Trooba
+            .use(require('..'))
+            .use(function (pipe) {
+                pipe.on('request', function () {
+                    var stream = pipe.respond('pong');
+                    Assert.ok(stream.point);
+                    Assert.equal(2, stream.direction);
+                    next();
+                });
+            })
+            .build()
+            .create()
+            .request('ping');
+        });
+
         it('should do empty request stream', function (next) {
             var events = [];
 

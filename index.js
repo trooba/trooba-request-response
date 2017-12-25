@@ -93,6 +93,10 @@ function createStream(pipe, direction, session) {
     var closed;
 
     return {
+        point: pipe,
+        
+        direction: direction,
+
         on: function () {
             pipe.on.apply(pipe, arguments);
             return this;
