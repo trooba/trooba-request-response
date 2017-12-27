@@ -540,9 +540,7 @@ describe(__filename, function () {
                     pipe.respond();
                 });
             })
-            .build({
-                retry: 2
-            })
+            .build()
             .create()
             .request({
                 order: []
