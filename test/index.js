@@ -552,6 +552,37 @@ describe(__filename, function () {
                 done();
             });
         });
+
+        it('should handle multiple calls without conflicts', function (done) {
+            var pipe = Trooba
+            .use(require('..'))
+            .use(function handler(pipe) {
+                // noop
+            })
+            .use(function tr(pipe) {
+                pipe.on('request', function (request) {
+                    pipe.respond(request);
+                });
+            })
+            .build({
+                retry: 2
+            });
+
+            pipe.create().request({
+                foo: 'bar'
+            }, function validateResponse(err, response) {
+                Assert.ok(!err);
+                Assert.deepEqual({foo:'bar'}, response);
+
+                pipe.create().request({
+                    foo: 'qaz'
+                }, function validateResponse(err, response) {
+                    Assert.ok(!err);
+                    Assert.deepEqual({foo:'qaz'}, response);
+                    done();
+                });
+            });
+        });
     });
 
     describe('streaming', function () {
