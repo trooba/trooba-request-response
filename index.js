@@ -94,7 +94,7 @@ function createStream(pipe, direction, session) {
 
     return {
         point: pipe,
-        
+
         direction: direction,
 
         on: function () {
@@ -128,6 +128,11 @@ function createStream(pipe, direction, session) {
 
             if (data === undefined) {
                 closed = true;
+                pipe.send({
+                    type: direction === pipe.Direction.REQUEST ? 'request:end' : 'response:end',
+                    direction: direction,
+                    session: session
+                });
             }
 
             return this;

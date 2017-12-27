@@ -222,6 +222,338 @@ describe(__filename, function () {
         .request('ping');
     });
 
+    describe('backwards compatibility', function () {
+
+        it('should send custom message for custom handler', function (done) {
+            var order = [];
+            Trooba
+            .use(require('..'))
+            .use(function replace(pipe) {
+                pipe.on('custom-handle-message', function (data, next) {
+                    pipe.context.data = data;
+                    order.push('replace');
+                    next();
+                });
+            })
+            .use(function transport(pipe) {
+                pipe.on('custom-request', function (data) {
+                    order.push('tr');
+                    pipe.respond(data+pipe.context.data);
+                });
+            })
+            .build()
+            .create()
+            .once('response', function (response) {
+                Assert.equal('foobar', response);
+                Assert.equal(['replace', 'tr'].toString(), order.toString());
+                done();
+            })
+            .send('custom-handle-message', 'bar')
+            .send('custom-request', 'foo');
+        });
+
+        it('should send sync custom message for custom handler', function (done) {
+            var order = [];
+            Trooba
+            .use(require('..'))
+            .use(function replace(pipe) {
+                pipe.on('custom-handle-message', function (data, next) {
+                    // since we get sync message we do not need to call any next method
+                    // one cannot prevent it from propagation down the pipeline
+
+                    Assert.equal('function skip() {}', next.toString());
+
+                    order.push('replace');
+
+                    pipe.context.data = 'foo';
+                });
+            })
+            .use(function shouldNotAffect(pipe) {
+                pipe.on('custom-handle-message', function (data, next) {
+                    // since we get sync message we do not need to call any next method
+                    // one cannot prevent it from propagation down the pipeline
+                    Assert.equal('function skip() {}', next.toString());
+                    order.push('shouldNotAffect');
+                    // symulate delayed context change that should not affect reponse
+                    setTimeout(function () {
+                        pipe.context.data = 'boom';
+                    }, 10);
+                });
+            })
+            .use(function transport(pipe) {
+                pipe.on('custom-handle-message', function (data) {
+                    order.push('tr');
+                    pipe.respond(data+pipe.context.data);
+                });
+            })
+            .build()
+            .create()
+            .once('response', function (response) {
+                Assert.deepEqual(['replace', 'shouldNotAffect', 'tr'], order);
+                Assert.equal('barfoo', response);
+
+                done();
+            })
+            .send({
+                type: 'custom-handle-message',
+                direction: 1,
+                data: 'bar',
+                sync: true
+            });
+        });
+
+        it('should send async custom message for custom handler', function (done) {
+            var order = [];
+            Trooba
+            .use(require('..'))
+            .use(function replace(pipe) {
+                pipe.on('custom-handle-message', function (data, next) {
+                    order.push('replace');
+                    // this change will be overwritten by the next handler
+                    pipe.context.data = 'foo';
+                    next();
+                });
+            })
+            .use(function shouldNotAffect(pipe) {
+                pipe.on('custom-handle-message', function (data, next) {
+                    order.push('shouldNotAffect');
+                    // since we get sync message we do not need to call any next method
+                    // one cannot prevent it from propagation down the pipeline
+
+                    // symulate delayed context change that should not affect reponse
+                    setTimeout(function () {
+                        pipe.context.data = 'boom';
+                        next();
+                    }, 10);
+                });
+            })
+            .use(function (pipe) {
+                pipe.on('custom-handle-message', function (data) {
+                    order.push('tr');
+                    pipe.respond(data+pipe.context.data);
+                });
+            })
+            .build()
+            .create()
+            .once('response', function (response) {
+                Assert.deepEqual(['replace', 'shouldNotAffect', 'tr'], order);
+
+                Assert.equal('barboom', response);
+
+                done();
+            })
+            .send({
+                type: 'custom-handle-message',
+                direction: 1,
+                data: 'bar',
+                sync: false
+            });
+        });
+
+        it('should catch only request chunks and provide hook at stream level', function (done) {
+            var pipe = Trooba
+            .use(require('..'))
+            .use(function (pipe) {
+                var reqData = [];
+                pipe.on('request', function () {
+                    pipe.resume();
+                });
+                pipe.on('request:data', function (data, next) {
+                    reqData.push(data);
+                    next();
+                });
+                pipe.once('request:end', function (data) {
+                    setImmediate(function () {
+                        pipe.respond(reqData);
+                    });
+                });
+            })
+            .build()
+            .create();
+
+            pipe.request('request')
+                .write('foo')
+                .write('bar')
+                .once('error', done)
+                .on('response', function (response) {
+                    Assert.deepEqual(['foo', 'bar', undefined], response);
+                    done();
+                })
+                .end();
+        });
+
+        it('should catch only response chunks', function (done) {
+            var pipe = Trooba
+            .use(require('..'))
+            .use(function (pipe) {
+                pipe.on('request', function () {
+                    pipe.respond('response')
+                        .write('foo')
+                        .write('bar')
+                        .end();
+                });
+            })
+            .build()
+            .create()
+            .on('response', function (response, next) {
+                Assert.equal('response', response);
+                next();
+            });
+
+            var reqData = [];
+            pipe.request('request').on('response:data', function (data, next) {
+                reqData.push(data);
+                next();
+            });
+            pipe.once('response:end', function (data) {
+                Assert.deepEqual(['foo', 'bar', undefined], reqData);
+                done();
+            });
+
+        });
+
+        it('should catch all response messages', function (done) {
+            var pipe = Trooba
+            .use(require('..'))
+            .use(function (pipe) {
+                pipe.on('request', function () {
+                    pipe.respond('response')
+                        .write('foo')
+                        .write('bar')
+                        .end();
+                });
+            })
+            .build()
+            .create();
+
+            var reqData = [];
+            pipe.request('request')
+            .on('*', function (message) {
+                reqData.push(message.data);
+                message.next();
+            })
+            .once('response:end', function (data) {
+                Assert.deepEqual(['response', 'foo', 'bar', undefined], reqData);
+                done();
+            });
+
+        });
+
+        it('should catch all messages', function (done) {
+            var messages = [];
+            var pipe = Trooba
+            .use(require('..'))
+            .use(function catchhAll(pipe) {
+                pipe.on('*', function (message) {
+                    messages.push(message.data);
+                    message.next();
+                });
+            })
+            .use(function (pipe) {
+                pipe.on('request', function () {
+                    pipe.respond('response')
+                        .write('foo')
+                        .write('bar')
+                        .end();
+                });
+            })
+            .build()
+            .create()
+            .request('request');
+
+            pipe.once('response:end', function (data) {
+                Assert.deepEqual(['request', 'response', 'foo', 'bar', undefined, undefined], messages);
+                done();
+            });
+
+        });
+
+        it('should handle error after a few chunks', function (done) {
+            var pipe = Trooba
+            .use(require('..'))
+            .use(function (pipe) {
+                pipe.on('request', function () {
+                    pipe.respond('response')
+                        .write('foo')
+                        .write('bar');
+                    setTimeout(function () {
+                        pipe.throw(new Error('Boom'));
+                    }, 10);
+                });
+            })
+            .build()
+            .create()
+            .on('response', function (response, next) {
+                Assert.equal('response', response);
+                next(); // resume
+            });
+
+            var count = 0;
+            pipe.request('request').on('response:data', function (data, next) {
+                count++;
+                next();
+            });
+            pipe.once('response:end', function (data) {
+                done(new Error('Should never happen'));
+            });
+            pipe.once('error', function (err) {
+                Assert.equal('Boom', err.message);
+                Assert.equal(2, count);
+                done();
+            });
+
+        });
+
+        it('should throw errer on the way back', function (done) {
+            Trooba
+            .use(require('..'))
+            .use(function handler(pipe) {
+                pipe.on('response', function () {
+                    pipe.throw(new Error('Test'));
+                });
+            })
+            .use(function tr(pipe) {
+                pipe.on('request', function () {
+                    pipe.respond('bad content');
+                });
+            })
+            .build({
+                retry: 2
+            })
+            .create()
+            .request({
+                order: []
+            }, function validateResponse(err, response) {
+                Assert.ok(err);
+                Assert.equal('Test', err.message);
+                done();
+            });
+        });
+
+        it('should handle empty reply', function (done) {
+            Trooba
+            .use(require('..'))
+            .use(function handler(pipe) {
+            })
+            .use(function tr(pipe) {
+                pipe.on('request', function () {
+                    pipe.respond();
+                });
+            })
+            .build({
+                retry: 2
+            })
+            .create()
+            .request({
+                order: []
+            }, function validateResponse(err, response) {
+                Assert.ok(!err);
+                Assert.ok(!response);
+                done();
+            });
+        });
+    });
+
     describe('streaming', function () {
         it('should provide access to pipe and direction for request stream', function () {
             var stream = Trooba
